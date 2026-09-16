@@ -1,0 +1,11 @@
+/home/thakon/workspaces/autome/target/debug/deps/cookie-398043bc405e22c4.d: /home/thakon/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/cookie-0.16.2/src/lib.rs /home/thakon/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/cookie-0.16.2/src/builder.rs /home/thakon/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/cookie-0.16.2/src/parse.rs /home/thakon/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/cookie-0.16.2/src/jar.rs /home/thakon/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/cookie-0.16.2/src/delta.rs /home/thakon/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/cookie-0.16.2/src/draft.rs /home/thakon/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/cookie-0.16.2/src/expiration.rs
+
+/home/thakon/workspaces/autome/target/debug/deps/libcookie-398043bc405e22c4.rmeta: /home/thakon/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/cookie-0.16.2/src/lib.rs /home/thakon/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/cookie-0.16.2/src/builder.rs /home/thakon/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/cookie-0.16.2/src/parse.rs /home/thakon/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/cookie-0.16.2/src/jar.rs /home/thakon/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/cookie-0.16.2/src/delta.rs /home/thakon/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/cookie-0.16.2/src/draft.rs /home/thakon/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/cookie-0.16.2/src/expiration.rs
+
+/home/thakon/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/cookie-0.16.2/src/lib.rs:
+/home/thakon/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/cookie-0.16.2/src/builder.rs:
+/home/thakon/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/cookie-0.16.2/src/parse.rs:
+/home/thakon/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/cookie-0.16.2/src/jar.rs:
+/home/thakon/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/cookie-0.16.2/src/delta.rs:
+/home/thakon/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/cookie-0.16.2/src/draft.rs:
+/home/thakon/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/cookie-0.16.2/src/expiration.rs:
