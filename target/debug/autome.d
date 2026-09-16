@@ -1,1 +1,1 @@
-/Users/thakonpgm/Storages/workspaces/autome/target/debug/autome: /Users/thakonpgm/Storages/workspaces/autome/src/main.rs
+/home/thakon/workspaces/autome/target/debug/autome: /home/thakon/workspaces/autome/src/main.rs

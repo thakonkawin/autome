@@ -1,3 +1,4 @@
+use actix_cors::Cors;
 use actix_web::{App, HttpServer, Responder, get, web};
 use serde::{Deserialize, Serialize};
 
@@ -42,11 +43,33 @@ async fn get_users() -> impl Responder {
     web::Json(users)
 }
 
+// #[actix_web::main]
+// async fn main() -> std::io::Result<()> {
+//     HttpServer::new(|| App::new().service(health_check).service(get_users))
+//         .bind(("0.0.0.0", 10000))?
+//         .workers(2)
+//         .run()
+//         .await
+// }
+
+// use actix_cors::Cors;
+// use actix_web::{App, HttpServer, Responder, get, web};
+
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    HttpServer::new(|| App::new().service(health_check).service(get_users))
-        .bind(("0.0.0.0", 10000))?
-        .workers(2)
-        .run()
-        .await
+    HttpServer::new(|| {
+        App::new()
+            .wrap(
+                Cors::default()
+                    .allow_any_origin()
+                    .allow_any_method()
+                    .allow_any_header(),
+            )
+            .service(health_check)
+            .service(get_users)
+    })
+    .bind(("0.0.0.0", 10000))?
+    .workers(2)
+    .run()
+    .await
 }
