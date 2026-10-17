@@ -1,8 +1,12 @@
 use actix_cors::Cors;
-use actix_web::{App, HttpResponse, HttpServer, Responder, get, post, web};
+use actix_web::{App, HttpRequest, HttpResponse, HttpServer, Responder, get, post, web};
 use dotenv::dotenv;
 use serde::{Deserialize, Serialize};
 use std::env;
+
+// =========================
+// Health Check
+// =========================
 
 #[derive(Debug, Serialize)]
 struct HealthResponse {
@@ -10,162 +14,158 @@ struct HealthResponse {
     app_name: &'static str,
     app_version: &'static str,
 }
-// test
 
 #[get("/api")]
 async fn health_check() -> impl Responder {
-    println!("================ health_check ================");
-
     web::Json(HealthResponse {
         status: "ok",
-        app_name: "autome-api-test",
-        app_version: "v0.0.2",
+        app_name: "autome-api",
+        app_version: "v0.0.3",
     })
 }
 
-#[derive(Debug, Serialize, Deserialize)]
-struct WebhookRequest {
-    destination: String,
-    events: Vec<Event>,
+// =========================
+// Telegram Webhook Models
+// =========================
+
+#[derive(Debug, Deserialize)]
+struct TelegramUpdate {
+    message: Option<TelegramMessage>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
-struct Event {
-    #[serde(rename = "type")]
-    event_type: String,
-    message: Option<Message>,
-    timestamp: u64,
-    source: Source,
-    #[serde(rename = "replyToken")]
-    reply_token: String,
-    mode: String,
-    #[serde(rename = "webhookEventId")]
-    webhook_event_id: String,
-    #[serde(rename = "deliveryContext")]
-    delivery_context: DeliveryContext,
+#[derive(Debug, Deserialize)]
+struct TelegramMessage {
+    text: Option<String>,
+    chat: TelegramChat,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
-struct Message {
-    #[serde(rename = "type")]
-    message_type: String,
-    id: String,
+#[derive(Debug, Deserialize)]
+struct TelegramChat {
+    id: i64,
+}
+
+// =========================
+// Telegram Send Message
+// =========================
+
+#[derive(Debug, Serialize)]
+struct TelegramSendMessage {
+    chat_id: i64,
     text: String,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
-struct Source {
-    #[serde(rename = "type")]
-    source_type: String,
-    #[serde(rename = "userId")]
-    user_id: String,
-}
+// =========================
+// Telegram Webhook Handler
+// =========================
 
-#[derive(Debug, Serialize, Deserialize)]
-struct DeliveryContext {
-    #[serde(rename = "isRedelivery")]
-    is_redelivery: bool,
-}
+#[post("/api/telegram-webhook")]
+async fn telegram_webhook(req: HttpRequest, payload: web::Json<TelegramUpdate>) -> HttpResponse {
+    println!("================ TELEGRAM WEBHOOK ================");
 
-#[post("/api/line-webhook")]
-async fn line_webhook(payload: web::Json<WebhookRequest>) -> impl Responder {
-    println!("================ LINE WEBHOOK ================");
-    println!("Destination: {}", payload.destination);
-
-    for event in &payload.events {
-        println!("Event Type: {}", event.event_type);
-        println!("Timestamp: {}", event.timestamp);
-        println!("Reply Token: {}", event.reply_token);
-        println!("Mode: {}", event.mode);
-        println!("Webhook Event ID: {}", event.webhook_event_id);
-
-        println!("User ID: {}", event.source.user_id);
-
-        if let Some(message) = &event.message {
-            println!("Message Type: {}", message.message_type);
-            println!("Message ID: {}", message.id);
-            println!("Message Text: {}", message.text);
+    // ตรวจสอบ Webhook Secret
+    let expected_secret = match env::var("TELEGRAM_WEBHOOK_SECRET") {
+        Ok(secret) => secret,
+        Err(_) => {
+            eprintln!("TELEGRAM_WEBHOOK_SECRET is not configured");
+            return HttpResponse::InternalServerError().body("Webhook secret is not configured");
         }
+    };
 
-        println!("Redelivery: {}", event.delivery_context.is_redelivery);
+    let received_secret = req
+        .headers()
+        .get("X-Telegram-Bot-Api-Secret-Token")
+        .and_then(|value| value.to_str().ok());
 
-        // ส่ง Reply กลับ LINE
-        if event.event_type == "message" {
-            if let Err(error) = reply_webhook(&event.reply_token).await {
-                eprintln!("LINE Reply Error: {}", error);
-            }
-        }
-
-        println!("==============================================");
+    if received_secret != Some(expected_secret.as_str()) {
+        return HttpResponse::Unauthorized().finish();
     }
+
+    let message = match &payload.message {
+        Some(message) => message,
+        None => {
+            // Update อาจเป็น event ประเภทอื่นที่ไม่ใช่ข้อความ
+            return HttpResponse::Ok().finish();
+        }
+    };
+
+    let text = match &message.text {
+        Some(text) => text.trim(),
+        None => {
+            // ไม่ใช่ข้อความตัวอักษร เช่น รูปภาพหรือสติกเกอร์
+            return HttpResponse::Ok().finish();
+        }
+    };
+
+    let chat_id = message.chat.id;
+
+    println!("Chat ID: {}", chat_id);
+    println!("Message: {}", text);
+
+    let reply = match text {
+        "/start" => "สวัสดี! ผมคือ autome 🤖\nยินดีต้อนรับสู่ Personal Bot ของคุณ",
+        "/help" => "คำสั่งที่ใช้งานได้:\n/start - เริ่มต้นใช้งาน\n/help - ดูคำสั่ง\n/status - ตรวจสอบสถานะ",
+        "/status" => "Autome API is running normally. ✅",
+        _ => "Autome ได้รับข้อความของคุณแล้ว ✅",
+    };
+
+    // ส่งคำตอบกลับ Telegram
+    if let Err(error) = reply_telegram(chat_id, reply).await {
+        eprintln!("Telegram Reply Error: {}", error);
+
+        // รับ Webhook สำเร็จแล้ว แต่การส่งข้อความกลับล้มเหลว
+        // ตอบ 200 เพื่อไม่ให้ Telegram ส่ง Update เดิมซ้ำโดยอัตโนมัติ
+        return HttpResponse::Ok().finish();
+    }
+
+    println!("===================================================");
 
     HttpResponse::Ok().finish()
 }
 
 // =========================
-// LINE Reply Payload
+// Telegram Reply Function
 // =========================
 
-#[derive(Debug, Serialize)]
-struct ReplyRequest {
-    #[serde(rename = "replyToken")]
-    reply_token: String,
+async fn reply_telegram(chat_id: i64, text: &str) -> Result<(), Box<dyn std::error::Error>> {
+    let bot_token = env::var("TELEGRAM_BOT_TOKEN")?;
 
-    messages: Vec<ReplyMessage>,
-}
+    let url = format!("https://api.telegram.org/bot{}/sendMessage", bot_token);
 
-#[derive(Debug, Serialize)]
-struct ReplyMessage {
-    #[serde(rename = "type")]
-    message_type: String,
-
-    text: String,
-}
-
-// =========================
-// Reply Function
-// =========================
-
-async fn reply_webhook(reply_token: &str) -> Result<(), Box<dyn std::error::Error>> {
-    let channel_access_token = env::var("CHANNEL_ACCESS_TOKEN")?;
-
-    let url = "https://api.line.me/v2/bot/message/reply";
-
-    let body = ReplyRequest {
-        reply_token: reply_token.to_string(),
-        messages: vec![
-            ReplyMessage {
-                message_type: "text".to_string(),
-                text: "Hello, user".to_string(),
-            },
-            ReplyMessage {
-                message_type: "text".to_string(),
-                text: "May I help you?".to_string(),
-            },
-        ],
+    let body = TelegramSendMessage {
+        chat_id,
+        text: text.to_string(),
     };
 
     let client = reqwest::Client::new();
 
-    let response = client
-        .post(url)
-        .bearer_auth(channel_access_token)
-        .json(&body)
-        .send()
-        .await?;
+    let response = client.post(&url).json(&body).send().await?;
 
-    println!("LINE Reply Status: {}", response.status());
-
+    let status = response.status();
     let response_body = response.text().await?;
 
-    println!("LINE Reply Response: {}", response_body);
+    println!("Telegram Reply Status: {}", status);
+
+    if !status.is_success() {
+        return Err(format!("Telegram API error: {}", response_body).into());
+    }
 
     Ok(())
 }
 
+// =========================
+// Main
+// =========================
+
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     dotenv().ok();
+
+    let port: u16 = env::var("PORT")
+        .unwrap_or_else(|_| "10000".to_string())
+        .parse()
+        .expect("PORT must be a valid port number");
+
+    println!("Starting autome-api on port {}", port);
 
     HttpServer::new(|| {
         App::new()
@@ -176,9 +176,9 @@ async fn main() -> std::io::Result<()> {
                     .allow_any_header(),
             )
             .service(health_check)
-            .service(line_webhook)
+            .service(telegram_webhook)
     })
-    .bind(("0.0.0.0", 10000))?
+    .bind(("0.0.0.0", port))?
     .workers(2)
     .run()
     .await
