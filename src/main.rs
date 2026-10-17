@@ -178,7 +178,7 @@ async fn main() -> std::io::Result<()> {
             .service(health_check)
             .service(line_webhook)
     })
-    .bind(("127.0.0.1", 3040))?
+    .bind(("0.0.0.0", 10000))?
     .workers(2)
     .run()
     .await
