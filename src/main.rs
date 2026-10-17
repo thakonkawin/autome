@@ -10,9 +10,12 @@ struct HealthResponse {
     app_name: &'static str,
     app_version: &'static str,
 }
+// test
 
 #[get("/api")]
 async fn health_check() -> impl Responder {
+    println!("================ health_check ================");
+
     web::Json(HealthResponse {
         status: "ok",
         app_name: "autome-api-test",
@@ -175,7 +178,7 @@ async fn main() -> std::io::Result<()> {
             .service(health_check)
             .service(line_webhook)
     })
-    .bind(("0.0.0.0", 10000))?
+    .bind(("127.0.0.1", 3040))?
     .workers(2)
     .run()
     .await
