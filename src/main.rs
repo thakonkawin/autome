@@ -1,5 +1,5 @@
 use actix_cors::Cors;
-use actix_web::{App, HttpRequest, HttpResponse, HttpServer, Responder, get, post, web};
+use actix_web::{App, HttpResponse, HttpServer, Responder, get, post, web};
 use dotenv::dotenv;
 use serde::{Deserialize, Serialize};
 use std::env;
@@ -59,31 +59,13 @@ struct TelegramSendMessage {
 // =========================
 
 #[post("/api/telegram-webhook")]
-async fn telegram_webhook(req: HttpRequest, payload: web::Json<TelegramUpdate>) -> HttpResponse {
+async fn telegram_webhook(payload: web::Json<TelegramUpdate>) -> HttpResponse {
     println!("================ TELEGRAM WEBHOOK ================");
-
-    // ตรวจสอบ Webhook Secret
-    let expected_secret = match env::var("TELEGRAM_WEBHOOK_SECRET") {
-        Ok(secret) => secret,
-        Err(_) => {
-            eprintln!("TELEGRAM_WEBHOOK_SECRET is not configured");
-            return HttpResponse::InternalServerError().body("Webhook secret is not configured");
-        }
-    };
-
-    let received_secret = req
-        .headers()
-        .get("X-Telegram-Bot-Api-Secret-Token")
-        .and_then(|value| value.to_str().ok());
-
-    if received_secret != Some(expected_secret.as_str()) {
-        return HttpResponse::Unauthorized().finish();
-    }
 
     let message = match &payload.message {
         Some(message) => message,
         None => {
-            // Update อาจเป็น event ประเภทอื่นที่ไม่ใช่ข้อความ
+            // ไม่ใช่ Update ประเภทข้อความ
             return HttpResponse::Ok().finish();
         }
     };
@@ -108,15 +90,16 @@ async fn telegram_webhook(req: HttpRequest, payload: web::Json<TelegramUpdate>) 
         _ => "Autome ได้รับข้อความของคุณแล้ว ✅",
     };
 
-    // ส่งคำตอบกลับ Telegram
+    // ส่งข้อความตอบกลับ Telegram
     if let Err(error) = reply_telegram(chat_id, reply).await {
         eprintln!("Telegram Reply Error: {}", error);
 
-        // รับ Webhook สำเร็จแล้ว แต่การส่งข้อความกลับล้มเหลว
-        // ตอบ 200 เพื่อไม่ให้ Telegram ส่ง Update เดิมซ้ำโดยอัตโนมัติ
+        // รับ Webhook แล้ว แต่การตอบกลับล้มเหลว
+        // ไม่ให้ Telegram ส่ง Update เดิมซ้ำโดยอัตโนมัติ
         return HttpResponse::Ok().finish();
     }
 
+    println!("Telegram reply sent successfully");
     println!("===================================================");
 
     HttpResponse::Ok().finish()
